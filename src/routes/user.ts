@@ -11,7 +11,7 @@ import { getTransactionsList, postRequestAddMoney, postWithdrawMoney } from '../
 import { getGameListuser } from '../controller/user/game-management/game-management';
 
 const route = express.Router();
-
+// test
 route
 // Auth
   .post('/register', userRegisterMiddleware, userRegister)
