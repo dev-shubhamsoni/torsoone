@@ -64,12 +64,9 @@ export const adminTable = pgTable(
     account_holder_name: varchar('account_holder_name', { length: 255 }),
     account_number: integer(),
     ifsc_code: varchar('ifsc_code', { length: 255 }),
-
-
-
+    txn_upi_id: varchar('txn_upi_id', { length: 255 }),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-    
   },
   (table) => {
     return {

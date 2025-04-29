@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { sendCatchError, sendError, sendSuccess } from '../../../utils/commonFunctions';
 
-import { games, market, userBids, userDetails, userTable, userTransactions } from '../../../drizzle/schema';
+import { adminTable, games, market, userBids, userDetails, userTable, userTransactions } from '../../../drizzle/schema';
 import { db } from '../../../drizzle/db';
 import { count, sql, and, gte, lte, ilike, asc, desc, eq } from 'drizzle-orm';
-import { CustomRequestToken } from '../../../utils/types';
+import { CustomRequestToken, CustomRequestTokenADmin } from '../../../utils/types';
 
 export const getAllUsersList = async (req: Request, res: Response) => {
   try {
@@ -198,7 +198,7 @@ export const getUserTransactionsList = async (req: CustomRequestToken, res: Resp
 
     const getList = await db
       .select({
-        id : userTransactions.id,
+        id: userTransactions.id,
         txn_id: userTransactions.txn_id,
         userId: userTransactions.userId,
         txn_type: userTransactions.txn_type,
@@ -260,7 +260,7 @@ export const postAdminUpdateUserProfile = async (req: CustomRequestToken, res: R
 
     if (Object.keys(updateData).length > 0) {
       updateData.updated_at = new Date();
-      const up = new Date()
+      const up = new Date();
       await db.update(userDetails).set(updateData).where(eq(userDetails.userId, uid));
       await db.update(userTable).set({ updated_at: up }).where(eq(userTable.uid, uid));
       return sendSuccess(res, { message: 'User details updated.', code: 200 });
@@ -349,6 +349,84 @@ export const getAllBids = async (req: Request, res: Response) => {
   } catch (error) {
     sendCatchError(res, {
       message: 'Failed fetching bids.',
+      code: 409,
+      errorDetail: error,
+    });
+  }
+};
+
+export const postUpdateAdminProfile = async (req: CustomRequestTokenADmin, res: Response) => {
+  const aid = typeof req.adminId === 'string' ? req.adminId : req.adminId?.sub;
+
+  if (!aid) {
+    return sendError(res, { message: 'Admin ID is missing.', code: 401 });
+  }
+
+  const {
+    mobile_number,
+    email,
+    whatsapp_number,
+    min_withdrwal_rate,
+    max_withdrwal_rate,
+    max_transfer,
+    min_transfer,
+    account_holder_name,
+    account_number,
+    ifsc_code,
+    txn_upi_id,
+  } = req.body;
+
+  try {
+    const getAdmin = await db.select().from(adminTable).where(eq(adminTable.aid, aid));
+    const admin = getAdmin.length > 0 ? getAdmin[0] : null;
+
+    if (!admin) {
+      return sendError(res, { message: 'Admin not found', code: 404 });
+    }
+
+    const updateData = {
+      ...(mobile_number !== undefined && { mobile_number }),
+      ...(email !== undefined && { email }),
+      ...(whatsapp_number !== undefined && { whatsapp_number }),
+      ...(min_withdrwal_rate !== undefined && { min_withdrwal_rate }),
+      ...(max_withdrwal_rate !== undefined && { max_withdrwal_rate }),
+      ...(max_transfer !== undefined && { max_transfer }),
+      ...(min_transfer !== undefined && { min_transfer }),
+      ...(account_holder_name !== undefined && { account_holder_name }),
+      ...(account_number !== undefined && { account_number }),
+      ...(ifsc_code !== undefined && { ifsc_code }),
+      ...(txn_upi_id !== undefined && { txn_upi_id }),
+    } as Record<string, number | string | Date>;
+
+    if (Object.keys(updateData).length > 0) {
+      updateData.updated_at = new Date();
+      await db.update(adminTable).set(updateData).where(eq(adminTable.aid, aid));
+      return sendSuccess(res, { message: 'Admin details updated.', code: 200 });
+    } else {
+      return sendError(res, { message: 'Please send values to update.', code: 401 });
+    }
+  } catch (error) {
+    sendCatchError(res, {
+      message: 'Error updating admin details',
+      code: 409,
+      errorDetail: error,
+    });
+  }
+};
+
+
+
+export const getSingleAdmin = async (req: Request, res: Response) => {
+  try {
+    
+    const getList = await db
+      .select()
+      .from(adminTable)
+
+    return sendSuccess(res, { message: 'Success.', data: getList, code: 200 });
+  } catch (error) {
+    sendCatchError(res, {
+      message: 'Failed fetching admin list',
       code: 409,
       errorDetail: error,
     });

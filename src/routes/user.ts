@@ -6,7 +6,7 @@ import {
   userTokenCheckMiddleware,
 } from '../middleware/user/userMiddleware';
 import { addBid, getBidListUser, getMarketListUser } from '../controller/user/market-management/market-management';
-import { getProfileData, postUpdateProfile } from '../controller/user/profile/profile';
+import { getProfileData, getSingleAdmin, postUpdateProfile } from '../controller/user/profile/profile';
 import { getTransactionsList, postRequestAddMoney, postWithdrawMoney } from '../controller/user/wallet-management/wallet-management';
 import { getGameListuser } from '../controller/user/game-management/game-management';
 
@@ -19,6 +19,7 @@ route
   // Profile
   .post('/update-profile', userTokenCheckMiddleware, postUpdateProfile)
   .get('/get-profile', userTokenCheckMiddleware, getProfileData)
+  .get('/get-admin-profile', userTokenCheckMiddleware, getSingleAdmin)
   // Market Management
   .get('/market-list', userTokenCheckMiddleware, getMarketListUser)
   .post('/add-bid', userTokenCheckMiddleware, addBid)
