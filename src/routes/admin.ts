@@ -3,7 +3,7 @@ import { addMarket, getBidListAdmin, getGamesListNames, getMarketListAdmin, getM
 import { adminLogin, adminRegister } from '../controller/admin/authentication/authentication';
 import {  adminTokenCheckMiddleware } from '../middleware/admin/adminMiddleware';
 import { adminAddMoney, adminRemoveMoney, getAllTransactionsList, postUpdateTransactionStatus } from '../controller/admin/wallet-management/wallet-management';
-import { getAllBids, getAllUsersList, getDashboardStats, getSingleuser, getUserTransactionsList, postAdminUpdateUserProfile } from '../controller/admin/user/user';
+import { getAllBids, getAllUsersList, getDashboardStats, getSingleAdmin, getSingleuser, getUserTransactionsList, postAdminUpdateUserProfile, postUpdateAdminProfile } from '../controller/admin/user/user';
 import { addGame, getGameListAdmin, getSingleGameAdmin, updateGame } from '../controller/admin/game-management/game-management';
 import { deleteWinData, getWinList, getWinnersList, postAddWinData, postDeclareWinners } from '../controller/admin/winnings-management/winnings-management';
 
@@ -43,5 +43,8 @@ route.post('/register', adminRegister)
 .get('/get-win-list',adminTokenCheckMiddleware, getWinList)
 .delete('/delete-win-data',adminTokenCheckMiddleware, deleteWinData)
 .post('/post-declare-winners',adminTokenCheckMiddleware, postDeclareWinners)
+// Admin
+.get('/get-admin-details',adminTokenCheckMiddleware, getSingleAdmin)
+.post('/post-admin-details',adminTokenCheckMiddleware, postUpdateAdminProfile)
 
 export default route;

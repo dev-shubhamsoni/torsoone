@@ -283,11 +283,13 @@ export const getWinnersList = async (req: Request, res: Response) => {
 
 export const postDeclareWinners = async (req: Request, res: Response) => {
   try {
-    const { marketId, gameId, bid_amount, bid_type, resultDate: date } = req.body;
+    const { id,marketId, gameId, bid_amount, bid_type, resultDate: date } = req.body;
 
-    if (!marketId || !gameId || !bid_amount || !bid_type || !date) {
+    if (!id || !marketId || !gameId || !bid_amount || !bid_type || !date) {
       return sendError(res, { message: 'Please send all fields.', code: 422 });
     }
+
+ 
 
     await db.transaction(async (tx) => {
       await tx
@@ -299,7 +301,7 @@ export const postDeclareWinners = async (req: Request, res: Response) => {
           tx
             .select({
               userId: userBids.userId,
-              total_bid_amount: sql`SUM(${userBids.bid_amount})`.as('total_bid_amount'), // FIX: Explicit alias
+              total_bid_amount: sql`SUM(${userBids.bid_amount})`.as('total_bid_amount'),
             })
             .from(userBids)
             .where(
@@ -313,7 +315,10 @@ export const postDeclareWinners = async (req: Request, res: Response) => {
             .groupBy(userBids.userId)
             .as('subquery')
         )
-        .where(eq(userDetails.userId, sql`subquery."userId"`)); // Ensure case sensitivity
+        .where(eq(userDetails.userId, sql`subquery."userId"`));
+
+
+        await tx.update(winData).set({money_settled : true}).where(eq(winData.id, id))
 
       return sendSuccess(res, {
         message: 'Result Updated.',

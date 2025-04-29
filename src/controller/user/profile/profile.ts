@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { sendCatchError, sendError, sendSuccess } from '../../../utils/commonFunctions';
 
-import { userDetails, userTable } from '../../../drizzle/schema';
+import { adminTable, userDetails, userTable } from '../../../drizzle/schema';
 import { db } from '../../../drizzle/db';
 
 import { eq } from 'drizzle-orm';
@@ -85,6 +85,25 @@ export const getProfileData = async (req: CustomRequestToken, res: Response) => 
   } catch (error) {
     sendCatchError(res, {
       message: 'Failed fetching user list',
+      code: 409,
+      errorDetail: error,
+    });
+  }
+};
+
+
+
+export const getSingleAdmin = async (req: CustomRequestToken, res: Response) => {
+  try {
+    
+    const getList = await db
+      .select()
+      .from(adminTable)
+
+    return sendSuccess(res, { message: 'Success.', data: getList, code: 200 });
+  } catch (error) {
+    sendCatchError(res, {
+      message: 'Failed fetching admin list',
       code: 409,
       errorDetail: error,
     });
