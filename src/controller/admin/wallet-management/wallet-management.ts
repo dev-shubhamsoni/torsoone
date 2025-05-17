@@ -7,7 +7,18 @@ import { and, asc, desc, eq, ilike, sql } from 'drizzle-orm';
 
 export const getAllTransactionsList = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '10', sortBy = 'created_at', sortOrder = 'desc', search } = req.query;
+    const { 
+      page = '1', 
+      limit = '10', 
+      sortBy = 'created_at', 
+      sortOrder = 'desc', 
+      search,
+      mobile_number,
+      txn_type,
+      status
+    } = req.query;
+
+    console.log("req.query",req.query)
 
     // Convert pagination values to numbers.
     const pageNumber = parseInt(page as string, 10);
@@ -17,6 +28,11 @@ export const getAllTransactionsList = async (req: Request, res: Response) => {
     // Convert search to a valid string or undefined
     const searchQuery = Array.isArray(search) ? search[0] : search;
     const searchString = typeof searchQuery === 'string' ? searchQuery : undefined;
+
+    // Convert other filters to strings or undefined
+    const mobileNumber = Array.isArray(mobile_number) ? mobile_number[0] : mobile_number;
+    const transactionType = Array.isArray(txn_type) ? txn_type[0] : txn_type as string;
+    const transactionStatus = Array.isArray(status) ? status[0] : status as string;
 
     // Validate sort order (only allow 'asc' or 'desc').
     const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -49,8 +65,36 @@ export const getAllTransactionsList = async (req: Request, res: Response) => {
     const orderByField = validSortFields.includes(sortBy as string) ? sortBy : 'created_at';
     const orderColumn = sortFieldToColumn[orderByField as keyof typeof sortFieldToColumn];
 
-    // Get total records count
-    const totalCountQuery = await db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(userTransactions);
+    // Build where conditions
+    const whereConditions = [];
+
+    if (searchString) {
+      whereConditions.push(ilike(userTable.full_name, `%${searchString}%`));
+    }
+
+    if (mobileNumber) {
+      whereConditions.push(ilike(userTable.mobile_number, `%${mobileNumber}%`));
+    }
+
+    if (transactionType && (transactionType === 'Money add request' || 
+        transactionType === 'Money withdraw request' || 
+        transactionType === 'Bid Placed' || 
+        transactionType === 'Winnings')) {
+      whereConditions.push(eq(userTransactions.txn_type, transactionType));
+    }
+
+    if (transactionStatus && (transactionStatus === 'Approved' || 
+        transactionStatus === 'Rejected' || 
+        transactionStatus === 'Pending')) {
+      whereConditions.push(eq(userTransactions.status, transactionStatus));
+    }
+
+    // Get total records count with filters
+    const totalCountQuery = await db
+      .select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+      .from(userTransactions)
+      .innerJoin(userTable, eq(userTable.uid, userTransactions.userId))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
     const totalCount = totalCountQuery[0]?.count || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -70,7 +114,7 @@ export const getAllTransactionsList = async (req: Request, res: Response) => {
       })
       .from(userTransactions)
       .innerJoin(userTable, eq(userTable.uid, userTransactions.userId))
-      .where(and(searchString ? ilike(userTable.full_name, `%${searchString}%`) : undefined))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(orderDirection === 'asc' ? asc(orderColumn) : desc(orderColumn))
       .limit(pageSize)
       .offset(offset);
