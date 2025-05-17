@@ -1,5 +1,5 @@
 import express from 'express';
-import { userLogin, userRegister } from '../controller/user/authentication/authentication';
+import { userLogin, userLoginByPin, userRegister } from '../controller/user/authentication/authentication';
 import {
   userLoginMiddleware,
   userRegisterMiddleware,
@@ -16,6 +16,7 @@ route
 // Auth
   .post('/register', userRegisterMiddleware, userRegister)
   .post('/login', userLoginMiddleware, userLogin)
+  .post('/user-login-by-pin', userLoginByPin)
   // Profile
   .post('/update-profile', userTokenCheckMiddleware, postUpdateProfile)
   .get('/get-profile', userTokenCheckMiddleware, getProfileData)

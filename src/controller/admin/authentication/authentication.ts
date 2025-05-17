@@ -59,7 +59,7 @@ export const adminLogin = async (req: CustomRequest, res: Response) => {
     const token = jwt.sign(
       { adminId: getAdminData[0]?.aid || '' }, 
       process.env.JWT_TOKEN, 
-      { expiresIn: '12h' }  
+      { expiresIn: '2d' }  
     );
     
     if (token) {

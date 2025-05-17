@@ -5,6 +5,7 @@ import { sendCatchError, sendError, sendSuccess } from '../../../utils/commonFun
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { eq } from 'drizzle-orm';
 dotenv.config();
 
 export interface CustomRequest extends Request {
@@ -68,7 +69,7 @@ export const userRegister = async (req: Request, res: Response) => {
         paytm_pay_no: '',
       });
 
-      const token = jwt.sign({ userId: userIdFortoken || '' }, secretKey, { expiresIn: '12h' });
+      const token = jwt.sign({ userId: userIdFortoken || '' }, secretKey, { expiresIn: '2d' });
       return sendSuccess(res, { message: 'User registered succcessfully.', data: [{ token }], code: 201 });
     });
   } catch (error) {
@@ -101,13 +102,59 @@ export const userLogin = async (req: CustomRequest, res: Response) => {
       return sendError(res, { message: 'Wrong password.', code: 400 });
     }
 
-    const token = jwt.sign({ userId: req.id || '' }, process.env.JWT_TOKEN, { expiresIn: '12h' });
+    const token = jwt.sign({ userId: req.id || '' }, process.env.JWT_TOKEN, { expiresIn: '2d' });
 
     if (token) {
       return sendSuccess(res, { message: 'Login Successful.', code: 200, data: [{ token }] });
     } else {
       return sendError(res, { message: 'Wrong password.', code: 500 });
     }
+  } catch (error) {
+    sendCatchError(res, {
+      message: 'Error logging user.',
+      code: 409,
+      errorDetail: error,
+    });
+  }
+};
+
+export const userLoginByPin = async (req: CustomRequest, res: Response) => {
+  if (!process.env.JWT_TOKEN) {
+    return sendError(res, { message: 'JWT secret is not set.', code: 500 });
+  }
+
+  try {
+    const { pin } = req.body;
+
+    if (!pin) {
+      return sendError(res, { message: 'Please enter all the fields.', code: 422 });
+    }
+
+    const pinRegex = /^[0-9]{4}$/;
+    if (!pinRegex.test(pin)) {
+      return sendError(res, { message: 'PIN must be 4 digits.', code: 422 });
+    }
+
+    const getList = await db
+      .select({
+        pin: userTable.pin,
+        uid: userTable.uid,
+      })
+      .from(userTable)
+      .where(eq(userTable.pin, pin));
+
+    if (getList.length === 0) {
+      return sendError(res, { message: 'Invalid PIN.', code: 400 });
+    }
+
+    const user = getList[0];
+    const token = jwt.sign({ userId: user.uid }, process.env.JWT_TOKEN, { expiresIn: '2d' });
+
+    return sendSuccess(res, { 
+      message: 'Login Successful.', 
+      code: 200, 
+      data: [{ token }] 
+    });
   } catch (error) {
     sendCatchError(res, {
       message: 'Error logging user.',

@@ -8,16 +8,19 @@ import { CustomRequestToken, CustomRequestTokenADmin } from '../../../utils/type
 
 export const getAllUsersList = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '10', sortBy = 'created_at', sortOrder = 'desc', search } = req.query;
+    const { page = '1', limit = '10', sortBy = 'created_at', sortOrder = 'desc', full_name, mobile_number } = req.query;
 
     // Convert pagination values to numbers.
     const pageNumber = parseInt(page as string, 10);
     const pageSize = parseInt(limit as string, 10);
     const offset = (pageNumber - 1) * pageSize;
 
-    // Convert search to a valid string or undefined
-    const searchQuery = Array.isArray(search) ? search[0] : search;
-    const searchString = typeof searchQuery === 'string' ? searchQuery : undefined;
+    // Convert full_name to a valid string or undefined
+    const fullNameQuery = Array.isArray(full_name) ? full_name[0] : full_name;
+    const fullNameString = typeof fullNameQuery === 'string' ? fullNameQuery : undefined;
+
+    // Convert mobile number to string or undefined
+    const mobileNumber = Array.isArray(mobile_number) ? mobile_number[0] : mobile_number;
 
     // Validate sort order (only allow 'asc' or 'desc').
     const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -46,8 +49,23 @@ export const getAllUsersList = async (req: Request, res: Response) => {
     const orderByField = validSortFields.includes(sortBy as string) ? sortBy : 'created_at';
     const orderColumn = sortFieldToColumn[orderByField as keyof typeof sortFieldToColumn];
 
-    // Get total records count
-    const totalCountQuery = await db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(userTable);
+    // Build where conditions
+    const whereConditions = [];
+
+    if (fullNameString) {
+      whereConditions.push(ilike(userTable.full_name, `%${fullNameString}%`));
+    }
+
+    if (mobileNumber) {
+      whereConditions.push(ilike(userTable.mobile_number, `%${mobileNumber}%`));
+    }
+
+    // Get total records count with filters
+    const totalCountQuery = await db
+      .select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+      .from(userTable)
+      .innerJoin(userDetails, eq(userTable.uid, userDetails.userId))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
     const totalCount = totalCountQuery[0]?.count || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -74,7 +92,7 @@ export const getAllUsersList = async (req: Request, res: Response) => {
       })
       .from(userTable)
       .innerJoin(userDetails, eq(userTable.uid, userDetails.userId))
-      .where(and(searchString ? ilike(userTable.full_name, `%${searchString}%`) : undefined))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(orderDirection === 'asc' ? asc(orderColumn) : desc(orderColumn))
       .limit(pageSize)
       .offset(offset);
@@ -384,19 +402,32 @@ export const postUpdateAdminProfile = async (req: CustomRequestTokenADmin, res: 
       return sendError(res, { message: 'Admin not found', code: 404 });
     }
 
-    const updateData = {
-      ...(mobile_number !== undefined && { mobile_number }),
-      ...(email !== undefined && { email }),
-      ...(whatsapp_number !== undefined && { whatsapp_number }),
-      ...(min_withdrwal_rate !== undefined && { min_withdrwal_rate }),
-      ...(max_withdrwal_rate !== undefined && { max_withdrwal_rate }),
-      ...(max_transfer !== undefined && { max_transfer }),
-      ...(min_transfer !== undefined && { min_transfer }),
-      ...(account_holder_name !== undefined && { account_holder_name }),
-      ...(account_number !== undefined && { account_number }),
-      ...(ifsc_code !== undefined && { ifsc_code }),
-      ...(txn_upi_id !== undefined && { txn_upi_id }),
-    } as Record<string, number | string | Date>;
+    const updateData: Record<string, number | string | Date | null> = {};
+
+    // Handle string fields
+    if (mobile_number !== undefined) updateData.mobile_number = mobile_number || null;
+    if (email !== undefined) updateData.email = email || null;
+    if (whatsapp_number !== undefined) updateData.whatsapp_number = whatsapp_number || null;
+    if (account_holder_name !== undefined) updateData.account_holder_name = account_holder_name || null;
+    if (ifsc_code !== undefined) updateData.ifsc_code = ifsc_code || null;
+    if (txn_upi_id !== undefined) updateData.txn_upi_id = txn_upi_id || null;
+
+    // Handle numeric fields
+    if (min_withdrwal_rate !== undefined) {
+      updateData.min_withdrwal_rate = min_withdrwal_rate === '' ? null : parseInt(min_withdrwal_rate);
+    }
+    if (max_withdrwal_rate !== undefined) {
+      updateData.max_withdrwal_rate = max_withdrwal_rate === '' ? null : parseInt(max_withdrwal_rate);
+    }
+    if (min_transfer !== undefined) {
+      updateData.min_transfer = min_transfer === '' ? null : parseInt(min_transfer);
+    }
+    if (max_transfer !== undefined) {
+      updateData.max_transfer = max_transfer === '' ? null : parseInt(max_transfer);
+    }
+    if (account_number !== undefined) {
+      updateData.account_number = account_number === '' ? null : parseInt(account_number);
+    }
 
     if (Object.keys(updateData).length > 0) {
       updateData.updated_at = new Date();
@@ -414,14 +445,23 @@ export const postUpdateAdminProfile = async (req: CustomRequestTokenADmin, res: 
   }
 };
 
-
-
 export const getSingleAdmin = async (req: Request, res: Response) => {
   try {
-    
     const getList = await db
-      .select()
-      .from(adminTable)
+      .select({
+        mobile_number: adminTable.mobile_number,
+        email: adminTable.email,
+        whatsapp_number: adminTable.whatsapp_number,
+        min_withdrwal_rate: adminTable.min_withdrwal_rate,
+        max_withdrwal_rate: adminTable.max_withdrwal_rate,
+        max_transfer: adminTable.max_transfer,
+        min_transfer: adminTable.min_transfer,
+        account_holder_name: adminTable.account_holder_name,
+        account_number: adminTable.account_number,
+        ifsc_code: adminTable.ifsc_code,
+        txn_upi_id: adminTable.txn_upi_id,
+      })
+      .from(adminTable);
 
     return sendSuccess(res, { message: 'Success.', data: getList, code: 200 });
   } catch (error) {

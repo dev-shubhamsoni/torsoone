@@ -91,14 +91,23 @@ export const getProfileData = async (req: CustomRequestToken, res: Response) => 
   }
 };
 
-
-
 export const getSingleAdmin = async (req: CustomRequestToken, res: Response) => {
   try {
-    
     const getList = await db
-      .select()
-      .from(adminTable)
+      .select({
+        mobile_number: adminTable.mobile_number,
+        email: adminTable.email,
+        whatsapp_number: adminTable.whatsapp_number,
+        min_withdrwal_rate: adminTable.min_withdrwal_rate,
+        max_withdrwal_rate: adminTable.max_withdrwal_rate,
+        max_transfer: adminTable.max_transfer,
+        min_transfer: adminTable.min_transfer,
+        account_holder_name: adminTable.account_holder_name,
+        account_number: adminTable.account_number,
+        ifsc_code: adminTable.ifsc_code,
+        txn_upi_id: adminTable.txn_upi_id,
+      })
+      .from(adminTable);
 
     return sendSuccess(res, { message: 'Success.', data: getList, code: 200 });
   } catch (error) {

@@ -16,6 +16,7 @@ export const userTable = pgTable(
   (table) => {
     return {
       uidIndex: index('uidIndex').on(table.uid),
+      pinIndex: index('pinIndex').on(table.pin),
     };
   }
 );
