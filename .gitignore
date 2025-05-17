@@ -1,10 +1,9 @@
 node_modules/
-
+dist/
 .git/
 
-dist/
+# Ignore Drizzle migrations
+src/drizzle/migrations/
 
-/src/drizzle/migrations/
-
-# env files (can opt-in for committing if needed)
+# Ignore all .env files
 .env*
